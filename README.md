@@ -82,9 +82,68 @@ docker exec finsight-dbt dbt run
 
 
 
+
+------------------------------------------------------------------------------------------
+------------------------- prsonal notes -------------------------------
+
 -- To clone this repo to a new machine
 git clone https://github.com/christosmoutzouris-cell/finsight-ai.git
 cd finsight-ai
 cp .env.example .env
 # Επεξεργασία .env με τα passwords σου
 docker compose up -d
+
+
+
+
+--setup after docker compose up -d
+
+1. Γιατί βάλαμε τα Spark jobs στο setup script αφού υπάρχουν στο Airflow;
+Το Airflow DAG τρέχει κάθε βράδυ αυτόματα — αλλά μόνο αν υπάρχουν ήδη οι πίνακες stock_prices_silver και gold_symbol_snapshot στη βάση.
+
+Την πρώτη φορά σε νέο laptop:
+
+Η βάση είναι άδεια
+Το dbt θα αποτύχει γιατί δεν υπάρχουν ακόμα οι πίνακες Silver/Gold
+Ο Airflow DAG δεν έχει τρέξει ποτέ
+Οπότε το setup script τα τρέχει μια φορά για να δημιουργήσει τους πίνακες. Μετά αναλαμβάνει ο Airflow αυτόματα.
+
+2. Πώς τα τρέχω — διπλό κλικ ή αυτόματα;
+Το setup script το τρέχεις μια φορά χειροκίνητα μετά το docker compose up -d:
+
+Windows (PowerShell):
+
+powershell
+.\setup.ps1
+Mac/Linux (Terminal):
+
+bash
+chmod +x setup.sh
+./setup.sh
+Μετά από αυτό όλα τρέχουν αυτόματα:
+
+Τι	Πότε	Πώς
+Kafka streaming	Συνεχώς κάθε 10s	Αυτόματα με docker compose up
+Airflow DAG	Κάθε βράδυ 22:00	Αυτόματα από scheduler
+Spark + dbt	Μέσα στο DAG	Αυτόματα μετά το Airflow
+
+
+
+
+
+
+
+
+
+
+
+
+
+--push changes
+cd "C:\Users\ChristosMoutzouris\OneDrive - Agile Actors\Desktop\AI Academy\finsight-ai"
+git init
+git add .
+git commit -m "Initial commit: FinSight AI Phases 1-4 + setup scripts"
+git branch -M main
+git remote add origin https://github.com/christosmoutzouris-cell/finsight-ai.git
+git push -u origin main
