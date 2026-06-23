@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: fct_stock_performance
+    description: "Daily performance metrics ανά symbol"
+    columns:
+      - name: symbol
+        tests:
+          - not_null
+      - name: date
+        tests:
+          - not_null
+      - name: close
+        tests:
+          - not_null
+
+  - name: dim_symbol_stats
+    description: "Aggregate statistics ανά symbol"
+    columns:
+      - name: symbol
+        tests:
+          - not_null
+          - unique

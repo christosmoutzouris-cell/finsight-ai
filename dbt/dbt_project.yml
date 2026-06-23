@@ -1,0 +1,16 @@
+name: finsight
+version: '1.0.0'
+config-version: 2
+
+profile: finsight
+
+model-paths: ["models"]
+test-paths: ["tests"]
+snapshot-paths: ["snapshots"]
+
+models:
+  finsight:
+    staging:
+      +materialized: view      # staging = views (δεν αποθηκεύουν data)
+    marts:
+      +materialized: table     # marts = tables (αποθηκεύουν data)

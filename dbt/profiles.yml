@@ -1,0 +1,12 @@
+finsight:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: finsight-postgres
+      port: 5432
+      user: finsight
+      password: finsight123
+      dbname: finsight_db
+      schema: public
+      threads: 4

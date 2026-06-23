@@ -1,0 +1,2 @@
+yfinance==1.4.1
+kafka-python==2.0.2
