@@ -147,3 +147,8 @@ git commit -m "Initial commit: FinSight AI Phases 1-4 + setup scripts"
 git branch -M main
 git remote add origin https://github.com/christosmoutzouris-cell/finsight-ai.git
 git push -u origin main
+
+
+git add .
+git commit -m "Add setup scripts, fix Docker socket for cross-platform support"
+git push
