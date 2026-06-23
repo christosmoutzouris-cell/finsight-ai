@@ -79,3 +79,12 @@ docker exec finsight-dbt dbt run
 - ✅ Phase 4: dbt Transformations
 - ⏳ Phase 5: AI/ML (Sentiment, LSTM, LLM)
 - ⏳ Phase 6: FastAPI + Streamlit Dashboard
+
+
+
+-- To clone this repo to a new machine
+git clone https://github.com/christosmoutzouris-cell/finsight-ai.git
+cd finsight-ai
+cp .env.example .env
+# Επεξεργασία .env με τα passwords σου
+docker compose up -d
