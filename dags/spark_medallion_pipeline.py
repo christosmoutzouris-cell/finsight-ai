@@ -47,3 +47,28 @@ with DAG(
     )
 
     bronze_to_silver >> silver_to_gold >> dbt_run
+    
+    
+    
+'''
+# Δημιουργεί το documentation
+docker exec finsight-dbt dbt docs generate
+
+# Ξεκινάει web server στο port 8083
+docker exec -d -p 8083:8080 finsight-dbt dbt docs serve --port 8080
+
+Μετά άνοιξε: http://localhost:8083
+Θα δεις:
+
+Αριστερά: λίστα με όλα τα models (stg_stock_prices, fct_stock_performance κλπ)
+Κλίκ σε model → βλέπεις στήλες, tests, SQL code
+Κάτω δεξιά: "View Lineage Graph" → γράφημα που δείχνει πώς συνδέονται τα models
+
+
+Επίσης για γρήγορο έλεγχο χωρίς UI:
+powershell# Δες τα test results
+docker exec finsight-dbt dbt test
+
+# Δες τα compiled SQL models
+docker exec finsight-dbt dbt compile
+'''

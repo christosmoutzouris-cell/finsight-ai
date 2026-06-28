@@ -5,7 +5,7 @@ sources:
     database: finsight_db
     schema: public
     tables:
-      - name: stock_prices_silver
+      - name: stock_prices_silver 
         description: "Silver layer από Spark — cleaned streaming data"
       - name: daily_stock_summary
         description: "Daily OHLCV από Airflow DAG"

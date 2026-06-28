@@ -224,8 +224,21 @@ services:
       postgres:
         condition: service_healthy
     working_dir: /usr/app/dbt
+    ports:
+      - "8083:8080" 
     command: >
       bash -c "pip install dbt-postgres==1.7.0 && tail -f /dev/null"
+
+# ── Sentiment Analysis ────────────────────────────────────────────────
+  sentiment:
+    build: ./ai/sentiment
+    container_name: finsight-sentiment
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"    # Τρέχει μια φορά και σταματάει
 
 volumes:
   postgres_data:

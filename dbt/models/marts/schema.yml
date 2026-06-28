@@ -13,6 +13,24 @@ models:
       - name: close
         tests:
           - not_null
+          # expression_is_true: οποιαδήποτε SQL έκφραση
+          # αποτυγχάνει αν η έκφραση είναι FALSE
+          - dbt_utils.expression_is_true:
+              expression: "> 0"
+      - name: high
+        tests:
+          # high πρέπει να είναι >= close
+          - dbt_utils.expression_is_true:
+              expression: ">= close"
+      - name: low
+        tests:
+          # low πρέπει να είναι <= close
+          - dbt_utils.expression_is_true:
+              expression: "<= close"
+      - name: volume
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "> 0"
 
   - name: dim_symbol_stats
     description: "Aggregate statistics ανά symbol"
@@ -21,3 +39,13 @@ models:
         tests:
           - not_null
           - unique
+          # Μόνο τα 5 symbols που έχουμε
+          - accepted_values:
+              values: ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"]
+      - name: total_days
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "> 0"
+      - name: volatility
+        tests:
+          - not_null
