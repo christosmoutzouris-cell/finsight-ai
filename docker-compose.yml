@@ -240,7 +240,20 @@ services:
         condition: service_healthy
     restart: "no"    # Τρέχει μια φορά και σταματάει
 
+  
+  lstm:
+   build: ./ai/lstm
+   container_name: finsight-lstm
+   environment:
+     - PYTHONUNBUFFERED=1
+   depends_on:
+     postgres:
+       condition: service_healthy
+   restart: "no"
+
 volumes:
   postgres_data:
   airflow_db_data:  
   airflow_logs: 
+
+

@@ -72,6 +72,16 @@ with DAG(
     ),
 )
     
+    lstm_prediction = BashOperator(
+    task_id="lstm_prediction",
+    bash_command=(
+        "docker run --rm "
+        "--network finsight-ai_default "
+        "finsight-ai-lstm "
+        "python lstm_predict.py"
+    ),
+)
+    
     data_quality_report = BashOperator(
     task_id="data_quality_report",
     bash_command="""
@@ -101,11 +111,13 @@ with DAG(
         echo "--- SENTIMENT SCORES ---" &&
         docker exec finsight-postgres psql -U finsight -d finsight_db -c "SELECT symbol, sentiment, confidence, analyzed_at FROM sentiment_scores ORDER BY analyzed_at DESC LIMIT 10;" &&
         echo "" &&
+        echo "--- LSTM: price_predictions ---" &&
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "SELECT symbol, current_price, predicted_price, predicted_change, predicted_direction, predicted_at FROM price_predictions ORDER BY predicted_at DESC LIMIT 5;" &&
         echo "=============================================================="
     """,
 )
 
-fix_spark_permissions >> update_yfinance >> bronze_to_silver >> silver_to_gold >> dbt_run >> sentiment_analysis >> data_quality_report
+fix_spark_permissions >> update_yfinance >> bronze_to_silver >> silver_to_gold >> dbt_run >> sentiment_analysis >> data_quality_report >> lstm_prediction
 
     
     
