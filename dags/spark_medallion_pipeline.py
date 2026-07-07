@@ -18,14 +18,22 @@ SPARK_SUBMIT = (
 
 with DAG(
     dag_id="spark_medallion_pipeline",
-    description="Bronze → Silver → Gold Medallion Architecture",
+    description="Bronze → Silver → Gold → dbt → Sentiment",
     default_args=default_args,
-    schedule="0 22 * * 1-5", # it will run every weekday at 22:00 (10 PM)
+    schedule= None #"0 22 * * 1-5",
     start_date=datetime(2026, 6, 1),
     catchup=False,
-    tags=["finsight", "spark", "medallion"],
+    tags=["finsight", "spark", "medallion", "dbt", "ai"],
 ) as dag:
 
+
+    update_yfinance = BashOperator(
+        task_id="update_yfinance",
+        bash_command=(
+            "docker exec finsight-producer pip install --upgrade yfinance -q && "
+            "docker restart finsight-producer"
+        ),
+    )
     bronze_to_silver = BashOperator(
         task_id="bronze_to_silver",
         bash_command=SPARK_SUBMIT + "/opt/spark_jobs/bronze_to_silver.py",
@@ -35,8 +43,7 @@ with DAG(
         task_id="silver_to_gold",
         bash_command=SPARK_SUBMIT + "/opt/spark_jobs/silver_to_gold.py",
     )
-    
-    # Εγκαθιστά protobuf fix και τρέχει dbt run + dbt test
+
     dbt_run = BashOperator(
         task_id="dbt_run",
         bash_command=(
@@ -46,7 +53,12 @@ with DAG(
         ),
     )
 
-    bronze_to_silver >> silver_to_gold >> dbt_run
+    sentiment_analysis = BashOperator(
+        task_id="sentiment_analysis",
+        bash_command="docker exec finsight-sentiment python train_and_predict.py",
+    )
+
+    update_yfinance >> bronze_to_silver >> silver_to_gold >> dbt_run >> sentiment_analysis
     
     
     

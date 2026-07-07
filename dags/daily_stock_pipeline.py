@@ -18,6 +18,7 @@ import yfinance as yf
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 # ── Default arguments ──────────────────────────────────────────────────────
 # Αυτά εφαρμόζονται σε κάθε task του DAG αν δεν οριστούν αλλού
@@ -225,5 +226,12 @@ with DAG(
     t3 = PythonOperator(task_id="load_to_postgres",  python_callable=load_to_postgres)
     t4 = PythonOperator(task_id="generate_report",   python_callable=generate_report)
 
-    # Ορίζει τη σειρά εκτέλεσης: t1 → t2 → t3 → t4
-    t1 >> t2 >> t3 >> t4
+   # Όταν τελειώσει το daily pipeline, τρέχει αυτόματα το medallion
+    trigger_medallion = TriggerDagRunOperator(
+        task_id="trigger_medallion_pipeline",
+        trigger_dag_id="spark_medallion_pipeline",  # το DAG που θα τριγκαριστεί
+        wait_for_completion=False,  # δεν περιμένει να τελειώσει
+        reset_dag_run=True,         # αν υπάρχει ήδη run, το επαναφέρει
+    )
+
+    t1 >> t2 >> t3 >> t4 >> trigger_medallion
