@@ -20,12 +20,19 @@ with DAG(
     dag_id="spark_medallion_pipeline",
     description="Bronze → Silver → Gold → dbt → Sentiment",
     default_args=default_args,
-    schedule= None #"0 22 * * 1-5",
+    schedule= None, #"0 22 * * 1-5",
     start_date=datetime(2026, 6, 1),
     catchup=False,
     tags=["finsight", "spark", "medallion", "dbt", "ai"],
 ) as dag:
 
+    fix_spark_permissions = BashOperator(
+    task_id="fix_spark_permissions",
+    bash_command=(
+        "docker exec -u root finsight-spark-master mkdir -p /home/spark/.ivy2/cache && "
+        "docker exec -u root finsight-spark-master chmod -R 777 /home/spark/.ivy2"
+    ),
+)
 
     update_yfinance = BashOperator(
         task_id="update_yfinance",
@@ -34,6 +41,8 @@ with DAG(
             "docker restart finsight-producer"
         ),
     )
+    
+    
     bronze_to_silver = BashOperator(
         task_id="bronze_to_silver",
         bash_command=SPARK_SUBMIT + "/opt/spark_jobs/bronze_to_silver.py",
@@ -57,8 +66,42 @@ with DAG(
         task_id="sentiment_analysis",
         bash_command="docker exec finsight-sentiment python train_and_predict.py",
     )
+    
+    data_quality_report = BashOperator(
+    task_id="data_quality_report",
+    bash_command="""
+        echo "==================== DATA QUALITY REPORT ====================" &&
+        echo "" &&
+        echo "--- BRONZE: stock_prices ---" &&
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "SELECT count(*) as total_rows FROM stock_prices;" &&
+        echo "" &&
+        echo "--- DAILY SUMMARY ---" &&
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "SELECT symbol, date, close, daily_return, created_at FROM daily_stock_summary ORDER BY created_at DESC LIMIT 5;" &&
+        echo "" &&
+        echo "--- SILVER: stock_prices_silver ---" &&
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "SELECT count(*) as total_rows FROM stock_prices_silver;" &&
+        echo "" &&
+        echo "--- GOLD: symbol_snapshot ---" &&
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "SELECT symbol, price, ma5, ma20, ma5_signal, pct_change FROM gold_symbol_snapshot;" &&
+        echo "" &&
+        echo "--- GOLD: daily_metrics ---" &&
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "SELECT symbol, date, close, price_volatility, tick_count FROM gold_daily_metrics ORDER BY date DESC LIMIT 5;" &&
+        echo "" &&
+        echo "--- DBT: fct_stock_performance ---" &&
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "SELECT symbol, date, close, cumulative_return, daily_rank FROM fct_stock_performance ORDER BY date DESC, daily_rank LIMIT 5;" &&
+        echo "" &&
+        echo "--- DBT: dim_symbol_stats ---" &&
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "SELECT symbol, total_days, avg_daily_return, volatility, positive_days, negative_days FROM dim_symbol_stats;" &&
+        echo "" &&
+        echo "--- SENTIMENT SCORES ---" &&
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "SELECT symbol, sentiment, confidence, analyzed_at FROM sentiment_scores ORDER BY analyzed_at DESC LIMIT 10;" &&
+        echo "" &&
+        echo "=============================================================="
+    """,
+)
 
-    update_yfinance >> bronze_to_silver >> silver_to_gold >> dbt_run >> sentiment_analysis
+fix_spark_permissions >> update_yfinance >> bronze_to_silver >> silver_to_gold >> dbt_run >> sentiment_analysis >> data_quality_report
+
     
     
     
