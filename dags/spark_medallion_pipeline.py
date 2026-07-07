@@ -63,9 +63,14 @@ with DAG(
     )
 
     sentiment_analysis = BashOperator(
-        task_id="sentiment_analysis",
-        bash_command="docker exec finsight-sentiment python train_and_predict.py",
-    )
+    task_id="sentiment_analysis",
+    bash_command=(
+        "docker run --rm "
+        "--network finsight-ai_default "
+        "finsight-ai-sentiment "
+        "python train_and_predict.py"
+    ),
+)
     
     data_quality_report = BashOperator(
     task_id="data_quality_report",
