@@ -7,5 +7,5 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-COPY ../common /app/common
+COPY ../common ./common
 CMD ["python", "-u", "train_and_predict.py"]

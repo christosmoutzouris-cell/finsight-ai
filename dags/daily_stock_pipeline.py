@@ -11,8 +11,9 @@ DAG: daily_stock_pipeline
 4. Εκτυπώνει report (αργότερα θα τρέχει dbt)
 """
 
+
+
 from datetime import datetime, timedelta
-import json
 import psycopg2
 import yfinance as yf
 
@@ -20,19 +21,15 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
-# ── Default arguments ──────────────────────────────────────────────────────
-# Αυτά εφαρμόζονται σε κάθε task του DAG αν δεν οριστούν αλλού
 default_args = {
     "owner": "finsight",
-    "retries": 2,                           # αν αποτύχει, ξαναπροσπαθεί 2 φορές
-    "retry_delay": timedelta(minutes=5),    # περιμένει 5 λεπτά μεταξύ retries
+    "retries": 2,
+    "retry_delay": timedelta(minutes=5),
     "email_on_failure": False,
 }
 
-SYMBOLS = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"]
-
 PG_CONN = {
-    "host":     "finsight-postgres",   # όνομα container στο docker network
+    "host":     "finsight-postgres",
     "port":     5432,
     "user":     "finsight",
     "password": "finsight123",
@@ -40,18 +37,24 @@ PG_CONN = {
 }
 
 
-# ── Task 1: Fetch ──────────────────────────────────────────────────────────
+def get_active_symbols() -> list:
+    """Διαβάζει symbols από watched_symbols table."""
+    try:
+        conn   = psycopg2.connect(**PG_CONN)
+        cursor = conn.cursor()
+        cursor.execute("SELECT symbol FROM watched_symbols WHERE is_active = TRUE ORDER BY symbol")
+        symbols = [row[0] for row in cursor.fetchall()]
+        cursor.close()
+        conn.close()
+        return symbols
+    except Exception as e:
+        print(f"Fallback στο default: {e}")
+        return ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"]
+
+
 def fetch_daily_data(**context):
-    """
-    Τραβάει το daily bar (OHLCV) για κάθε μετοχή.
-    
-    Το **context περιέχει πληροφορίες για το τρέχον DAG run,
-    π.χ. context["ds"] = η ημερομηνία εκτέλεσης (YYYY-MM-DD)
-    
-    Το XCom (cross-communication) επιτρέπει σε tasks να μοιράζονται δεδομένα.
-    Εδώ κάνουμε push τα δεδομένα και το Task 2 τα κάνει pull.
-    """
-    execution_date = context["ds"]  # π.χ. "2026-06-19"
+    symbols = get_active_symbols()  # ← διαβάζει από DB εδώ
+    execution_date = context["ds"]
     results = []
 
     for symbol in SYMBOLS:

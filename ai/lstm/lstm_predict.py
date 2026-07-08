@@ -22,7 +22,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import MinMaxScaler
 import sys
-from db_utils import get_active_symbols
+from common.db_utils import get_active_symbols
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,8 +39,6 @@ PG_CONN = {
     "dbname":   "finsight_db",
 }
 
-
-sys.path.append("/app/common")
 
 SYMBOLS = get_active_symbols()
 SEQUENCE_LEN = 20      # πόσες τιμές κοιτάει πίσω

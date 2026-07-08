@@ -6,8 +6,8 @@
 import logging
 import psycopg2
 import sys
-sys.path.append("/app/common")
-from db_utils import get_connection, get_active_symbols
+sys.path.append("/ai/common")
+from common.db_utils import get_connection, get_active_symbols
 
 logging.basicConfig(
     level=logging.INFO,
