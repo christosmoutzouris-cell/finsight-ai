@@ -7,6 +7,26 @@ from datetime import datetime, timezone
 import yfinance as yf
 from kafka import KafkaProducer
 from kafka.errors import NoBrokersAvailable
+import psycopg2
+
+def get_symbols_from_db() -> list[str]:
+    try:
+        conn = psycopg2.connect(
+            host="finsight-postgres",
+            port=5432,
+            user=os.environ["POSTGRES_USER"],
+            password=os.environ["POSTGRES_PASSWORD"],
+            dbname=os.environ["POSTGRES_DB"],
+        )
+        cursor = conn.cursor()
+        cursor.execute("SELECT symbol FROM watched_symbols WHERE is_active = TRUE ORDER BY symbol")
+        symbols = [row[0] for row in cursor.fetchall()]
+        cursor.close()
+        conn.close()
+        return symbols
+    except Exception as e:
+        log.warning(f"Δεν μπόρεσα να διαβάσω symbols από DB ({e}) — χρησιμοποιώ .env")
+        return os.environ["SYMBOLS"].split(",")
 
 #alpaca recovery code 81397b4e-90e6-45ca-be99-6bb21628ba77
 logging.basicConfig(
@@ -76,11 +96,13 @@ def fetch_price_history(symbol: str) -> dict | None:
 
 def main():
     producer = wait_for_kafka(KAFKA_BROKER)
+    SYMBOLS = get_symbols_from_db()
+    log.info(f"Symbols από DB: {SYMBOLS}")
     log.info(f"Ξεκινάω streaming για: {SYMBOLS} (κάθε {INTERVAL}s)")
 
     while True:
         records = []
-
+        
         for symbol in SYMBOLS:
             record = fetch_price_history(symbol)
             if record:

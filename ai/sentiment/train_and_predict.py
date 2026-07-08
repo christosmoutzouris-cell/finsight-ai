@@ -25,6 +25,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
+import sys
+import os
+import logging
+from db_utils import get_active_symbols
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,7 +45,18 @@ PG_CONN = {
     "dbname":   "finsight_db",
 }
 
-SYMBOLS = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"]
+
+sys.path.append("/app/common")
+try:
+    # prefer package from /app/common (production), fall back to local module
+    
+    SYMBOLS = get_active_symbols()
+except Exception:
+    # If db_utils isn't available (e.g. in editor/linter), provide a safe fallback
+    def get_active_symbols():
+        return []
+
+    SYMBOLS = get_active_symbols()
 
 
 # ══════════════════════════════════════════════════════════════════════════

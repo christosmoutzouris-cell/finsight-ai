@@ -18,3 +18,21 @@ CREATE TABLE IF NOT EXISTS stock_prices (
 CREATE INDEX idx_stock_symbol      ON stock_prices (symbol);
 CREATE INDEX idx_stock_event_time  ON stock_prices (event_time DESC);
 CREATE INDEX idx_stock_symbol_time ON stock_prices (symbol, event_time DESC);
+
+CREATE TABLE IF NOT EXISTS watched_symbols (
+    id          SERIAL PRIMARY KEY,
+    symbol      VARCHAR(10)  NOT NULL UNIQUE,
+    company     VARCHAR(100),
+    sector      VARCHAR(50),
+    is_active   BOOLEAN      DEFAULT TRUE,
+    added_at    TIMESTAMPTZ  DEFAULT NOW()
+);
+
+-- Insert αρχικά symbols
+INSERT INTO watched_symbols (symbol, company, sector) VALUES
+    ('AAPL',  'Apple Inc.',            'Technology'),
+    ('MSFT',  'Microsoft Corporation', 'Technology'),
+    ('GOOGL', 'Alphabet Inc.',         'Technology'),
+    ('AMZN',  'Amazon.com Inc.',       'Consumer'),
+    ('NVDA',  'NVIDIA Corporation',    'Technology')
+ON CONFLICT (symbol) DO NOTHING;
