@@ -368,6 +368,22 @@ def save_to_postgres(results: list[dict]):
 # MAIN
 # ══════════════════════════════════════════════════════════════════════════
 
+MODEL_PATH = "/app/models/sentiment_model.pt"
+VOCAB_PATH  = "/app/models/vocab.json"
+
+def save_model(model, vocab):
+    torch.save(model.state_dict(), MODEL_PATH)
+    with open(VOCAB_PATH, "w") as f:
+        json.dump(vocab, f)
+    log.info("Model αποθηκεύτηκε")
+
+def load_model(vocab):
+    model = SentimentLSTM(vocab_size=len(vocab))
+    model.load_state_dict(torch.load(MODEL_PATH))
+    model.eval()
+    log.info("Model φορτώθηκε από disk")
+    return model
+
 def main():
     log.info("=" * 50)
     log.info("  FinSight Sentiment Analysis")
@@ -376,10 +392,21 @@ def main():
     # 1. Build vocabulary
     vocab = build_vocab(TRAINING_DATA)
     log.info(f"Vocabulary size: {len(vocab)} words")
+    
+    # Αν υπάρχει ήδη trained model → φόρτωσέ το
+    # Αν όχι → εκπαίδευσε και αποθήκευσε
+    if os.path.exists(MODEL_PATH) and os.path.exists(VOCAB_PATH):
+        with open(VOCAB_PATH) as f:
+            vocab = json.load(f)
+        model = load_model(vocab)
+    else:
+        model = SentimentLSTM(vocab_size=len(vocab))
+        model = train_model(model, TRAINING_DATA, vocab, epochs=20)
+        save_model(model, vocab)
 
     # 2. Build και train model
     model = SentimentLSTM(vocab_size=len(vocab))
-    model = train_model(model, TRAINING_DATA, vocab, epochs=50)
+    model = train_model(model, TRAINING_DATA, vocab, epochs=20)
 
     # 3. Fetch news και predict
     all_results = []

@@ -210,7 +210,7 @@ def generate_report(**context):
     print(f"  📉 Worst: {worst['symbol']} ({worst['daily_return']:+.2f}%)")
     print("="*50 + "\n")
 
-
+SYMBOLS = get_active_symbols() 
 # ── DAG Definition ─────────────────────────────────────────────────────────
 with DAG(
     dag_id="daily_stock_pipeline",

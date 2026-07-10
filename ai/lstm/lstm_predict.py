@@ -43,7 +43,7 @@ PG_CONN = {
 SYMBOLS = get_active_symbols()
 SEQUENCE_LEN = 20      # πόσες τιμές κοιτάει πίσω
 EPOCHS       = 30
-BATCH_SIZE   = 32
+BATCH_SIZE   = 64
 HIDDEN_DIM   = 64
 NUM_LAYERS   = 2
 LEARNING_RATE = 0.001
@@ -94,6 +94,7 @@ def load_prices(symbol: str) -> pd.DataFrame:
         FROM stock_prices_silver
         WHERE symbol = %s
         ORDER BY event_time ASC
+        LIMIT 4000
     """, conn, params=(symbol,))
     conn.close()
     return df

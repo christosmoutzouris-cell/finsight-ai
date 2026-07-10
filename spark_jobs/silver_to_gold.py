@@ -40,10 +40,10 @@ gold_daily = silver_df \
     .withColumn("date", F.to_date("event_time")) \
     .groupBy("symbol", "date") \
     .agg(
-        F.first("price").alias("open"),
-        F.max("price").alias("high"),
-        F.min("price").alias("low"),
-        F.last("price").alias("close"),
+        F.min_by("price", "event_time").alias("open"),
+        F.max("high").alias("high"),
+        F.min("low").alias("low"),
+        F.max_by("price", "event_time").alias("close"),
         F.sum("volume").alias("total_volume"),
         F.count("*").alias("tick_count"),
         F.avg("pct_change").alias("avg_pct_change"),

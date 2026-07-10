@@ -34,6 +34,17 @@ with DAG(
     ),
 )
 
+    cleanup_old_data = BashOperator(
+    task_id="cleanup_old_data",
+    bash_command="""
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "
+        DELETE FROM stock_prices WHERE ingested_at < NOW() - INTERVAL '3 days';
+        DELETE FROM stock_prices_silver WHERE event_time < NOW() - INTERVAL '3 days';
+        DELETE FROM sentiment_scores WHERE analyzed_at < NOW() - INTERVAL '30 days';
+        DELETE FROM price_predictions WHERE predicted_at < NOW() - INTERVAL '30 days';
+        "
+    """,
+)
     update_yfinance = BashOperator(
         task_id="update_yfinance",
         bash_command=(
@@ -129,7 +140,7 @@ with DAG(
     """,
 )
 
-fix_spark_permissions >> update_yfinance >> bronze_to_silver >> silver_to_gold >> dbt_run >> sentiment_analysis >> lstm_prediction >> lstm_evaluate >> data_quality_report 
+fix_spark_permissions >> cleanup_old_data >> update_yfinance >> bronze_to_silver >> silver_to_gold >> dbt_run >> sentiment_analysis >> lstm_prediction >> lstm_evaluate >> data_quality_report 
 
     
     
