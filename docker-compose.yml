@@ -235,6 +235,8 @@ services:
     container_name: finsight-sentiment
     environment:
       - PYTHONUNBUFFERED=1
+    volumes:
+      - sentiment_model:/app/models 
     depends_on:
       postgres:
         condition: service_healthy
@@ -251,9 +253,23 @@ services:
        condition: service_healthy
    restart: "no"
 
+  neural-networks:
+    build: ./ai/neural_networks
+    container_name: finsight-neural-networks
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - nn_models:/app/models
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
 volumes:
   postgres_data:
   airflow_db_data:  
   airflow_logs: 
+  sentiment_model:
+  nn_models:   
 
 

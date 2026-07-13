@@ -221,6 +221,7 @@ with DAG(
     schedule="30 21 * * 1-5",   # Δευτέρα-Παρασκευή μόνο
     start_date=datetime(2026, 6, 1),
     catchup=False,               # μην τρέξεις για παλιές ημερομηνίες
+    max_active_runs=1,
     tags=["finsight", "stocks", "daily"],
 ) as dag:
 

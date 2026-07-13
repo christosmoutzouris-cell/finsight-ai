@@ -23,6 +23,7 @@ with DAG(
     schedule= None, #"0 22 * * 1-5",
     start_date=datetime(2026, 6, 1),
     catchup=False,
+    max_active_runs=1,
     tags=["finsight", "spark", "medallion", "dbt", "ai"],
 ) as dag:
 
@@ -46,12 +47,13 @@ with DAG(
     """,
 )
     update_yfinance = BashOperator(
-        task_id="update_yfinance",
-        bash_command=(
-            "docker exec finsight-producer pip install --upgrade yfinance -q && "
-            "docker restart finsight-producer"
-        ),
-    )
+    task_id="update_yfinance",
+    bash_command=(
+        "docker exec finsight-producer pip install --upgrade yfinance -q && "
+        "docker restart finsight-producer && "
+        "sleep 10"
+    ),
+)
     
     
     bronze_to_silver = BashOperator(
@@ -78,6 +80,7 @@ with DAG(
     bash_command=(
         "docker run --rm "
         "--network finsight-ai_default "
+        "-v sentiment_model:/app/models "
         "finsight-ai-sentiment "
         "python train_and_predict.py"
     ),
@@ -100,6 +103,28 @@ with DAG(
         "--network finsight-ai_default "
         "finsight-ai-lstm "
         "python evaluate_predictions.py"
+    ),
+)
+    
+    nn_sentiment = BashOperator(
+    task_id="nn_sentiment",
+    bash_command=(
+        "docker run --rm "
+        "--network finsight-ai_default "
+        "-v finsight-ai_nn_models:/app/models "
+        "finsight-ai-neural-networks "
+        "python train_sentiment.py"
+    ),
+)
+
+    nn_price_direction = BashOperator(
+    task_id="nn_price_direction",
+    bash_command=(
+        "docker run --rm "
+        "--network finsight-ai_default "
+        "-v finsight-ai_nn_models:/app/models "
+        "finsight-ai-neural-networks "
+        "python train_price_direction.py"
     ),
 )
     
@@ -140,7 +165,7 @@ with DAG(
     """,
 )
 
-fix_spark_permissions >> cleanup_old_data >> update_yfinance >> bronze_to_silver >> silver_to_gold >> dbt_run >> sentiment_analysis >> lstm_prediction >> lstm_evaluate >> data_quality_report 
+fix_spark_permissions >> cleanup_old_data >> update_yfinance >> bronze_to_silver >> silver_to_gold >> dbt_run >> sentiment_analysis >> nn_sentiment >> nn_price_direction >> lstm_prediction >> lstm_evaluate >> data_quality_report 
 
     
     

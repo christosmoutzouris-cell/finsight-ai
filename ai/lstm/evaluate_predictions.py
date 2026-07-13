@@ -149,11 +149,13 @@ def get_accuracy_report():
     log.info("=" * 60)
     for row in rows:
         symbol, total, correct, avg_err, acc = row
+        acc_val    = float(acc)    if acc    is not None else 0.0
+        avg_err_val = float(avg_err) if avg_err is not None else 0.0
+        correct_val = correct if correct is not None else 0
         log.info(
-            f"  {symbol:5s}: {acc:.1f}% accuracy "
-            f"({correct}/{total}) | avg error: ${avg_err:.2f}"
+            f"  {symbol:5s}: {acc_val:.1f}% accuracy "
+            f"({correct_val}/{total}) | avg error: ${avg_err_val:.2f}"
         )
-    log.info("=" * 60)
 
 
 if __name__ == "__main__":
