@@ -161,6 +161,11 @@ with DAG(
         docker exec finsight-postgres psql -U finsight -d finsight_db -c "SELECT symbol, current_price, predicted_price, predicted_change, predicted_direction, predicted_at FROM price_predictions ORDER BY predicted_at DESC LIMIT 5;" &&
         echo "--- LSTM: accuracy report ---" &&
         docker exec finsight-postgres psql -U finsight -d finsight_db -c "SELECT symbol, COUNT(*) as total, SUM(CASE WHEN direction_correct THEN 1 END) as correct, ROUND(AVG(price_error)::numeric, 2) as avg_error FROM price_predictions WHERE evaluated_at IS NOT NULL GROUP BY symbol;" &&
+        echo "--- NN SENTIMENT SCORES ---" &&
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "SELECT symbol, nn_sentiment, nn_confidence, analyzed_at FROM sentiment_nn_scores ORDER BY analyzed_at DESC LIMIT 10;" &&
+        echo "" &&
+        echo "--- NN PRICE DIRECTION ---" &&
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "SELECT symbol, current_price, predicted_dir, confidence, prob_up, prob_down, predicted_at FROM price_direction_predictions ORDER BY predicted_at DESC LIMIT 10;" &&
         echo "=============================================================="
     """,
 )

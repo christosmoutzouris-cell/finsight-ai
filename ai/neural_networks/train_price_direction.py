@@ -120,7 +120,15 @@ def load_training_data():
 
 # ── Training ───────────────────────────────────────────────────────────────
 def train(model, X_train, y_train, epochs=20):
-    criterion = nn.CrossEntropyLoss()
+    up_count   = (y_train == 1).sum()
+    down_count = (y_train == 0).sum()
+    total      = len(y_train)
+    weights    = torch.FloatTensor([
+        total / (2 * down_count),   # weight για DOWN
+        total / (2 * up_count)      # weight για UP
+    ])
+    criterion = nn.CrossEntropyLoss(weight=weights)
+    log.info(f"Class weights: DOWN={weights[0]:.3f}, UP={weights[1]:.3f}")
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     X_t = torch.FloatTensor(X_train)
