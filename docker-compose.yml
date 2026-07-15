@@ -265,11 +265,34 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # ── Ollama ─────────────────────────────────────────────────────────────────
+  # Τρέχει LLM τοπικά — σαν ChatGPT αλλά στον υπολογιστή σου
+  # UI: http://localhost:11434
+  ollama:
+    image: ollama/ollama:latest
+    container_name: finsight-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama    # αποθηκεύει τα models (δεν τα κατεβάζει κάθε φορά)
+    restart: unless-stopped
+
+  llm:
+    build: ./ai/llm
+    container_name: finsight-llm
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
 volumes:
   postgres_data:
   airflow_db_data:  
   airflow_logs: 
   sentiment_model:
   nn_models:   
+  ollama_models:
 
 
