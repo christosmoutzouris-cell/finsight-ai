@@ -18,7 +18,7 @@ SPARK_SUBMIT = (
 
 with DAG(
     dag_id="spark_medallion_pipeline",
-    description="Bronze → Silver → Gold → dbt → Sentiment",
+    description="Bronze → Silver → Gold → dbt → Sentiment → LLM → LSTM → Data Quality Report",
     default_args=default_args,
     schedule= None, #"0 22 * * 1-5",
     start_date=datetime(2026, 6, 1),

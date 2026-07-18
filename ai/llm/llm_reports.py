@@ -207,6 +207,8 @@ CURRENT DATA:
 - Daily Return: {data.get('daily_return', 0):+.2f}%
 - Volume: {data.get('volume', 0):,}
 
+
+
 NEWS SENTIMENT:
 {sentiment_text}
 {nn_sent_text}

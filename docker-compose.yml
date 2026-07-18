@@ -287,6 +287,18 @@ services:
         condition: service_healthy
     restart: "no"
 
+
+  # ── FastAPI ────────────────────────────────────────────────────────────────
+  api:
+    build: ./api
+    container_name: finsight-api
+    ports:
+      - "8088:8088"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    
 volumes:
   postgres_data:
   airflow_db_data:  
