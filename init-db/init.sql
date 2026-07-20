@@ -36,3 +36,19 @@ INSERT INTO watched_symbols (symbol, company, sector) VALUES
     ('AMZN',  'Amazon.com Inc.',       'Consumer'),
     ('NVDA',  'NVIDIA Corporation',    'Technology')
 ON CONFLICT (symbol) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS price_predictions (
+    id                BIGSERIAL PRIMARY KEY,
+    symbol            VARCHAR(10)    NOT NULL,
+    current_price     NUMERIC(12,4)  NOT NULL,
+    predicted_price   NUMERIC(12,4)  NOT NULL,
+    predicted_change  NUMERIC(8,4),
+    predicted_direction VARCHAR(4),
+    actual_price      NUMERIC(12,4),
+    actual_direction  VARCHAR(4),
+    price_error       NUMERIC(8,4),
+    direction_correct BOOLEAN,
+    model_type        VARCHAR(20)    DEFAULT 'LSTM',
+    predicted_at      TIMESTAMPTZ    DEFAULT NOW(),
+    evaluated_at      TIMESTAMPTZ
+);

@@ -19,6 +19,7 @@ services:
   # Τα μηνύματα αποθηκεύονται σε "topics" — σαν κανάλια.
   kafka:
     image: confluentinc/cp-kafka:7.5.0
+    platform: linux/amd64
     container_name: finsight-kafka
     depends_on:
       zookeeper:
@@ -203,7 +204,7 @@ services:
     container_name: finsight-spark-worker
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     environment:
-      SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_MEMORY: 1g
       SPARK_WORKER_CORES: 2
     depends_on:
       - spark-master

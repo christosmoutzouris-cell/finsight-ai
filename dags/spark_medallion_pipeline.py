@@ -40,10 +40,16 @@ with DAG(
     bash_command="""
         docker exec finsight-postgres psql -U finsight -d finsight_db -c "
         DELETE FROM stock_prices WHERE ingested_at < NOW() - INTERVAL '3 days';
+        " || true
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "
         DELETE FROM stock_prices_silver WHERE event_time < NOW() - INTERVAL '3 days';
+        " || true
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "
         DELETE FROM sentiment_scores WHERE analyzed_at < NOW() - INTERVAL '30 days';
+        " || true
+        docker exec finsight-postgres psql -U finsight -d finsight_db -c "
         DELETE FROM price_predictions WHERE predicted_at < NOW() - INTERVAL '30 days';
-        "
+        " || true
     """,
 )
     update_yfinance = BashOperator(

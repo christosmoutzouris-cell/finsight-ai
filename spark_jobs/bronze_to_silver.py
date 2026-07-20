@@ -23,6 +23,8 @@ spark = SparkSession.builder \
     .appName("FinSight Bronze to Silver") \
     .master("spark://spark-master:7077") \
     .config("spark.jars.packages", "org.postgresql:postgresql:42.7.3") \
+    .config("spark.executor.memory", "512m") \
+    .config("spark.driver.memory", "512m") \
     .getOrCreate()
 
 spark.sparkContext.setLogLevel("WARN")

@@ -41,114 +41,111 @@ MODEL      = "llama3.2"
 # ══════════════════════════════════════════════════════════════════════════
 
 def get_symbol_data(symbol: str) -> dict:
-    """
-    Συλλέγει όλα τα διαθέσιμα δεδομένα για ένα symbol:
-    - Τρέχουσα τιμή και moving averages (από gold_symbol_snapshot)
-    - Daily performance (από daily_stock_summary)
-    - Rule-based sentiment (από sentiment_scores)
-    - NN sentiment (από sentiment_nn_scores)
-    - LSTM prediction (από price_predictions)
-    - NN price direction (από price_direction_predictions)
-    """
     conn   = get_connection()
     cursor = conn.cursor()
     data   = {"symbol": symbol}
 
-    # 1. Gold snapshot — τρέχουσα τιμή και signals
-    cursor.execute("""
-        SELECT price, ma5, ma20, ma5_signal, pct_change, volume
-        FROM gold_symbol_snapshot
-        WHERE symbol = %s
-    """, (symbol,))
-    row = cursor.fetchone()
-    if row:
-        data["price"]      = float(row[0])
-        data["ma5"]        = float(row[1]) if row[1] else None
-        data["ma20"]       = float(row[2]) if row[2] else None
-        data["ma5_signal"] = row[3]
-        data["pct_change"] = float(row[4]) if row[4] else 0
-        data["volume"]     = int(row[5]) if row[5] else 0
+    # 1. Gold snapshot
+    try:
+        cursor.execute("""
+            SELECT price, ma5, ma20, ma5_signal, pct_change, volume
+            FROM gold_symbol_snapshot WHERE symbol = %s
+        """, (symbol,))
+        row = cursor.fetchone()
+        if row:
+            data["price"]      = float(row[0])
+            data["ma5"]        = float(row[1]) if row[1] else None
+            data["ma20"]       = float(row[2]) if row[2] else None
+            data["ma5_signal"] = row[3]
+            data["pct_change"] = float(row[4]) if row[4] else 0
+            data["volume"]     = int(row[5]) if row[5] else 0
+    except Exception as e:
+        log.warning(f"{symbol}: gold_symbol_snapshot not available — {e}")
 
-    # 2. Daily summary — τελευταία ημέρα
-    cursor.execute("""
-        SELECT date, open, high, low, close, daily_return
-        FROM daily_stock_summary
-        WHERE symbol = %s
-        ORDER BY date DESC LIMIT 1
-    """, (symbol,))
-    row = cursor.fetchone()
-    if row:
-        data["last_date"]    = str(row[0])
-        data["daily_open"]   = float(row[1]) if row[1] else None
-        data["daily_high"]   = float(row[2]) if row[2] else None
-        data["daily_low"]    = float(row[3]) if row[3] else None
-        data["daily_close"]  = float(row[4]) if row[4] else None
-        data["daily_return"] = float(row[5]) if row[5] else 0
+    # 2. Daily summary
+    try:
+        cursor.execute("""
+            SELECT date, open, high, low, close, daily_return
+            FROM daily_stock_summary
+            WHERE symbol = %s ORDER BY date DESC LIMIT 1
+        """, (symbol,))
+        row = cursor.fetchone()
+        if row:
+            data["last_date"]    = str(row[0])
+            data["daily_return"] = float(row[5]) if row[5] else 0
+            data["daily_close"]  = float(row[4]) if row[4] else None
+    except Exception as e:
+        log.warning(f"{symbol}: daily_stock_summary not available — {e}")
 
-    # 3. Rule-based sentiment — τελευταία 3 headlines
-    cursor.execute("""
-        SELECT headline, sentiment, confidence
-        FROM sentiment_scores
-        WHERE symbol = %s
-        ORDER BY analyzed_at DESC LIMIT 3
-    """, (symbol,))
-    rows = cursor.fetchall()
-    data["sentiment_headlines"] = [
-        {"text": r[0], "sentiment": r[1], "confidence": float(r[2])}
-        for r in rows
-    ]
+    # 3. Sentiment
+    try:
+        cursor.execute("""
+            SELECT headline, sentiment, confidence
+            FROM sentiment_scores
+            WHERE symbol = %s ORDER BY analyzed_at DESC LIMIT 3
+        """, (symbol,))
+        data["sentiment_headlines"] = [
+            {"text": r[0], "sentiment": r[1], "confidence": float(r[2])}
+            for r in cursor.fetchall()
+        ]
+    except Exception as e:
+        log.warning(f"{symbol}: sentiment_scores not available — {e}")
+        data["sentiment_headlines"] = []
 
-    # 4. NN sentiment — average scores
-    cursor.execute("""
-        SELECT
-            AVG(score_positive) as avg_pos,
-            AVG(score_negative) as avg_neg,
-            AVG(nn_confidence)  as avg_conf,
-            MODE() WITHIN GROUP (ORDER BY nn_sentiment) as dominant
-        FROM sentiment_nn_scores
-        WHERE symbol = %s
-        AND analyzed_at > NOW() - INTERVAL '1 day'
-    """, (symbol,))
-    row = cursor.fetchone()
-    if row and row[0]:
-        data["nn_sentiment"] = {
-            "avg_positive":  round(float(row[0]), 3),
-            "avg_negative":  round(float(row[1]), 3),
-            "avg_confidence": round(float(row[2]), 3),
-            "dominant":      row[3],
-        }
+    # 4. NN sentiment
+    try:
+        cursor.execute("""
+            SELECT AVG(score_positive), AVG(score_negative),
+                   AVG(nn_confidence), MODE() WITHIN GROUP (ORDER BY nn_sentiment)
+            FROM sentiment_nn_scores
+            WHERE symbol = %s AND analyzed_at > NOW() - INTERVAL '1 day'
+        """, (symbol,))
+        row = cursor.fetchone()
+        if row and row[0]:
+            data["nn_sentiment"] = {
+                "avg_positive":   round(float(row[0]), 3),
+                "avg_negative":   round(float(row[1]), 3),
+                "avg_confidence": round(float(row[2]), 3),
+                "dominant":       row[3],
+            }
+    except Exception as e:
+        log.warning(f"{symbol}: sentiment_nn_scores not available — {e}")
 
     # 5. LSTM prediction
-    cursor.execute("""
-        SELECT current_price, predicted_price, predicted_change, predicted_direction
-        FROM price_predictions
-        WHERE symbol = %s
-        ORDER BY predicted_at DESC LIMIT 1
-    """, (symbol,))
-    row = cursor.fetchone()
-    if row:
-        data["lstm_prediction"] = {
-            "current_price":   float(row[0]),
-            "predicted_price": float(row[1]),
-            "predicted_change": float(row[2]),
-            "direction":       row[3],
-        }
+    try:
+        cursor.execute("""
+            SELECT current_price, predicted_price, predicted_change, predicted_direction
+            FROM price_predictions
+            WHERE symbol = %s ORDER BY predicted_at DESC LIMIT 1
+        """, (symbol,))
+        row = cursor.fetchone()
+        if row:
+            data["lstm_prediction"] = {
+                "current_price":    float(row[0]),
+                "predicted_price":  float(row[1]),
+                "predicted_change": float(row[2]),
+                "direction":        row[3],
+            }
+    except Exception as e:
+        log.warning(f"{symbol}: price_predictions not available — {e}")
 
-    # 6. NN price direction
-    cursor.execute("""
-        SELECT predicted_dir, confidence, prob_up, prob_down
-        FROM price_direction_predictions
-        WHERE symbol = %s
-        ORDER BY predicted_at DESC LIMIT 1
-    """, (symbol,))
-    row = cursor.fetchone()
-    if row:
-        data["nn_direction"] = {
-            "direction":  row[0],
-            "confidence": float(row[1]),
-            "prob_up":    float(row[2]),
-            "prob_down":  float(row[3]),
-        }
+    # 6. NN direction
+    try:
+        cursor.execute("""
+            SELECT predicted_dir, confidence, prob_up, prob_down
+            FROM price_direction_predictions
+            WHERE symbol = %s ORDER BY predicted_at DESC LIMIT 1
+        """, (symbol,))
+        row = cursor.fetchone()
+        if row:
+            data["nn_direction"] = {
+                "direction":  row[0],
+                "confidence": float(row[1]),
+                "prob_up":    float(row[2]),
+                "prob_down":  float(row[3]),
+            }
+    except Exception as e:
+        log.warning(f"{symbol}: price_direction_predictions not available — {e}")
 
     cursor.close()
     conn.close()
